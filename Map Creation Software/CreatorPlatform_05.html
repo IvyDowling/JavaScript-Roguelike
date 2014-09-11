@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+ <html>
+  <head>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+  <title>Creation Platform</title>
+  <style>
+	html {
+		font-family: Courier New;
+	}
+	::-moz-selection { 
+		background-color: #3A6138; 
+		color: white;
+	}
+	::selection {
+		background-color: #3A6138;
+		color: white;
+	}
+	.header {
+		position: relative;
+		margin: 10px;
+		margin-bottom: 20px;
+	}
+	.sidebar {
+		position: fixed;
+		width: 180px;
+		background-color: #3A6138;
+		border-radius: 1px;
+	}
+	#sidebarTitle {
+		padding-top: 4px;
+		padding-left: 4px;
+		margin-bottom: -12px;
+	}
+	#sidebarText {
+		padding: 8px;
+		padding-left: 12px;
+	}
+	.mainTextArea {
+		position: absolute;
+		width: 80%;
+		min-width: 200px;
+		height: 80%;
+		min-height: 200px;
+		float: right;
+		font-size: 12px;
+		margin-right: 500px;
+		margin-left: 190px;
+		background-color: grey;
+		border: 1px solid;
+		border-radius: 2px;
+	}
+	#screen {
+		position: absolute;
+		bottom: 0;
+		right: 0;
+		margin: 2px;
+		margin-left: 0px;
+		height: 94%;
+		width: 94%;
+	}
+	#widthMeasure {
+		float: right;
+		width: 50px;
+		margin: 2px;
+	}
+	#heightMeasure {
+		position: absolute;
+		left: 0;
+		bottom: 0;
+		width: 44px;
+		margin: 2px;
+		margin-right:0px;
+	}
+	.topField {
+		margin: 2px;
+		margin-left: -6px;
+		border: 1px solid;
+	}
+	.sideField {
+		position: absolute;
+		left: 0;
+		margin: 2px;
+		margin-top: 40px;
+	}
+	#fontMeasure {
+		width: 40px;
+	}
+	#drawButton {
+		border: 1px;
+		margin: 0px;
+	}
+	#cropText {
+		margin: 2px;
+		margin-left: 50px;
+		padding: 2px;
+		font-size: 16px;
+	}
+	#replaceButton {
+		border:0;
+	}
+	#replaceText {
+		margin: 2px;
+		padding: 2px;
+		font-size: 16px;
+	}
+	
+	#importFile {
+		position: absolute;
+		bottom: 0;
+		background-color: #c3c3c3;
+		margin: 6px;
+		margin-left: 0px;
+		margin-bottom: 0px;
+	}
+	#exportButton {
+		position: absolute;
+		bottom: 0;
+		margin: 6px;
+		margin-left: 360px;
+		margin-bottom: 0px;
+		padding: 6px;
+		padding-top: 1px;
+		padding-bottom: 1px;
+	}
+	#insertMode {
+		position: absolute;
+		left: 0;
+		margin: 2px;
+		margin-top: 26px;
+	}
+  </style>
+  <script>
+	
+	var fontSize = $('#fontMeasure').val();
+	var screenW = $('#widthMeasure').val();
+	var screenH = $('#heightMeasure').val();
+	var mapInMemory = [];
+	
+	//COPIED FROM PARSER
+	var reader; //GLOBAL File Reader object for demo purpose only
+
+    /**
+     * Check for the various File API support.
+     */
+    function checkFileAPI() {
+        if (window.File && window.FileReader && window.FileList && window.Blob) {
+            reader = new FileReader();
+            return true; 
+        } else {
+            alert('The File APIs are not fully supported by your browser. Fallback required.');
+            return false;
+        }
+    }
+	//COPY END HERE
+
+	function renderScreenWidth(){
+		loadScreen();
+		var shortest = 100000; //unreal high number
+		for(var i = 0;i < mapInMemory.length;i++){
+			if(mapInMemory[i].length < shortest && mapInMemory[i].length > 0){
+				shortest = mapInMemory[i].length;
+			}
+		}
+		// -2 disregards the "enter" and @
+		console.log(shortest - 2);
+		return shortest - 2;
+	}
+	function renderScreenHeight(){
+		loadScreen();
+		return mapInMemory.length;
+	}
+	function loadScreen(){
+		var lastLineEnd = 0;
+		var arrayCounter = 0;
+		var screenContents = $("#screen").val();
+		//CLEAN ARRAY
+		for(var a = 0; a < mapInMemory.length;a++){
+			mapInMemory[a] = "";
+		}
+		for(var i = 0;i <= ($("#screen").val().length);i++){
+			if($("#screen").val().substring(i,i+1) == '@'){
+				mapInMemory[arrayCounter] = $.trim($("#screen").val().substring(lastLineEnd,i)) + "@" + "\n";
+				//this was a pain so I decided to manually add the '@'
+				//skip it here for the next String
+				lastLineEnd = i+1;
+				//increment to skip past on for loop
+				i++;
+				arrayCounter++;
+			}
+		}
+	}
+	function redrawScreen(){
+		var redrawing = "";
+		for( var i = 0; i < mapInMemory.length; i++){
+			redrawing += mapInMemory[i];
+		}
+		$("#screen").val(redrawing);
+		loadScreen();
+	}
+	
+	function changeFontSize(){
+		fontSize = $('#fontMeasure').val();
+		$("#screen").css("font-size",fontSize + 'px');
+		loadScreen();
+	}
+	function clipTool(){
+		loadScreen();
+		var clipTo = renderScreenWidth();
+		var finalOut = "";
+		for(var i = 0; i < mapInMemory.length; i++){
+			if(mapInMemory[i].length < clipTo){
+				var appended ="";
+				for( var x = 0; x<(mapInMemory[i].length - clipTo); x++){
+					appended += ".";
+				}
+				mapInMemory[i] += appended;
+			} else {
+				mapInMemory[i] = mapInMemory[i].substring(0,clipTo) + "@\n";
+			}
+			finalOut += mapInMemory[i];
+		}
+		$("#screen").val(finalOut);
+	}
+	function clearTool(){
+		var answer = confirm ("Clear Screen?")
+		if (answer){
+			$("#screen").val("");
+			loadScreen();
+		}
+	}
+	function changeWidth(){
+		var screenW = $('#widthMeasure').val();
+		if( screenW > 0){
+			$('#widthMeasure').val("");
+			loadScreen();
+			var finalOut = "";
+			if(typeof mapInMemory[0] === 'undefined' | mapInMemory[0] === ""){
+				var appended = "";
+				for(var x = 0; x < screenW; x++){
+					appended += ".";
+				}
+				mapInMemory[0] = appended + "@\n";
+				$("#screen").val(mapInMemory[0]);
+			} else {
+				for(var i = 0; i < mapInMemory.length; i++){
+					console.log(mapInMemory[i].length - 1);
+					if(mapInMemory[i] === ""){
+						//BREAK. GET OUT.
+						i = mapInMemory.length;
+					} else {
+						if((mapInMemory[i].length) - 1 == screenW){
+							mapInMemory[i] = mapInMemory[i].substring(0,mapInMemory[i].length-2) + ".@\n";
+						} else if(mapInMemory[i].length - 1 < screenW){
+							var appended = "";
+							for( var x = 0; x < (screenW - mapInMemory[i].length)+2; x++){
+								appended += ".";
+							}
+							mapInMemory[i] = mapInMemory[i].substring(0,mapInMemory[i].length-2) + appended + "@\n";
+							} else {
+							mapInMemory[i] = mapInMemory[i].substring(0,screenW) + "@\n";
+						}
+						finalOut += mapInMemory[i];
+					}	
+					$("#screen").val(finalOut);
+				}
+			}
+		}
+	}
+	$("#widthMeasure").bind("keydown",function(event){
+		if(event.which==13){
+			changeWidth();
+		}
+	});
+	function changeHeight(){
+		loadScreen();
+		var screenH = $('#heightMeasure').val();
+		if(screenH > 0){
+			var finalOut = "";
+			$('#heightMeasure').val("");
+			if(typeof mapInMemory[0] === 'undefined' | mapInMemory[0] === ""){
+				for(var x = 0; x < screenH; x++){
+					mapInMemory[x] = "@\n";
+					finalOut += mapInMemory[x];
+			}
+			} else {
+				if(mapInMemory.length > screenH){
+					mapInMemory.splice(screenH, mapInMemory.length - screenH);
+					loadScreen();
+				} else {
+					//account for 0
+					for(var y = mapInMemory.length - 1; y <= screenH; y++){
+						var toAdd = "";
+						// -2 for "@\n"
+						for(var t = 0; t < mapInMemory[0].length - 2; t++){
+							toAdd += ".";
+						}
+						mapInMemory[y] = toAdd + "@\n";
+						}
+					}
+				for( var n = 0; n < screenH; n++){
+					finalOut += mapInMemory[n];
+				}
+			}
+			$("#screen").val(finalOut);
+		}
+	}
+	$("#heightMeasure").bind("keydown",function(event){
+		if(event.which==13){
+			changeHeight();
+		}
+	});
+	
+	function readText(filePath) {
+        var output = ""; //placeholder for text output
+        if(filePath.files && filePath.files[0]) {           
+            reader.onload = function (e) {
+                output = e.target.result;
+                $("#screen").val(output);
+            };//end onload()
+            reader.readAsText(filePath.files[0]);
+        }//end if html5 filelist support
+        else if(ActiveXObject && filePath) { //fallback to IE 6-8 support via ActiveX
+            try {
+                reader = new ActiveXObject("Scripting.FileSystemObject");
+                var file = reader.OpenTextFile(filePath, 1); //ActiveX File Object
+                output = file.ReadAll(); //text contents of file
+                file.Close(); //close file "input stream"
+                $("#screen").val(output);
+            } catch (e) {
+                if (e.number == -2146827859) {
+                    alert('Unable to access local files due to browser security settings. ' + 
+                    'To overcome this, go to Tools->Internet Options->Security->Custom Level. ' + 
+                    'Find the setting for "Initialize and script ActiveX controls not marked as safe" and change it to "Enable" or "Prompt"'); 
+                }
+            }       
+        } else {
+			return false;
+        }       
+        return true;
+    }
+	
+	function drawTool(){
+		
+		loadScreen();
+		var drawBox = document.getElementById("drawButton");
+		var el = document.getElementById('screen');
+		
+		var initialX = 0;
+		var initialY = 0;
+		var endX = 0;
+		var endY = 0;
+		
+		if(drawBox.checked){
+			$("#screen").bind("mousedown",function(event){
+				if(event.which==1){
+					initialX = event.pageX;
+				}
+			});
+			$("#screen").bind("mouseup",function(ev){
+				if(ev.which==1){
+					endX = ev.pageX;
+					findSquare();
+				}
+			});
+			
+			function findSquare(){
+				var start = 0;
+				var end = 0;
+				if (typeof el.selectionStart == "number" && typeof el.selectionEnd == "number") {
+					start = el.selectionStart;
+					end = el.selectionEnd;
+				}
+				var offset = $("#screen").offset();
+				var screenCornerX = offset.left;
+				var currentFontWidth = $("#screen").css("font-size").substring(0,2);
+				alert("FONT SIZE: " +currentFontWidth);
+				
+				var y = 0;
+				while(y<start && initialY < mapInMemory.length){
+					y += mapInMemory[initialY].length;
+					initialY++;
+				}
+				y = 0;
+				while(y<end && endY < mapInMemory.length){
+					y += mapInMemory[endY].length;
+					endY++;
+				}
+				var squareH = endY-initialY;
+				var squareW = 0;
+				
+				if(initialX < endX){
+					squareW = endX - initialX;
+					initialX = initialX - screenCornerX;
+				} else {
+					squareW = initialX - endX;
+					initialX = endX - screenCornerX;
+				}
+				squareW = Math.ceil(squareW/currentFontWidth);
+				initialX = Math.floor(initialX/currentFontWidth);
+				if(squareW < 0){
+					squareW = 0;
+				} else if(squareH < 0){
+					squareH = 0;
+				} else if(initialX < 0){
+					initialX = 0;
+				}
+				
+				alert("Square size\n" + squareW + " x " + squareH + "\n" +"Displacement from corner(in characters)\n" + initialX + " x " + initialY);
+				
+				for( var i = initialY; i < squareH + initialY; i++){
+					//mapInMemory[i] = mapInMemory[i].substring(0,initialX) + "<span class='highlight'>" + mapInMemory[i].substring(initialX,initialX+squareW) + "</span>" + mapInMemory[i].substring(initialX+squareW);
+					mapInMemory[i] = mapInMemory[i].substring(0,initialX - 1) + mapInMemory[i].substring(initialX + squareW);
+				}
+				redrawScreen();
+				
+			}
+		} else {
+			$("#screen").unbind();
+		}
+	}
+	
+	function addEndSign(){
+		var fullReplace = $("#screen").val().replace(/\r\n/g, '@\n').replace(/[\r\n]/g, '@\n');
+		var iterationCatch = 0;
+		for(var i = 0; i < fullReplace.length; i++){
+			if(fullReplace.substring(i,i+2) === "@@"){
+				fullReplace = fullReplace.substring(iterationCatch,i) + fullReplace.substring(i+1);
+			}
+		}
+		if(fullReplace.charAt(fullReplace.length-1) == '@' | fullReplace.charAt(fullReplace.length-2) == '@'){
+			//JUMP
+		} else {
+			fullReplace += "@\n";
+		}
+		$("#screen").val(fullReplace);
+	}
+	
+	
+	function replaceTool(){
+		loadScreen();
+		var replaceBox = document.getElementById("replaceButton");
+		
+		var initialX = 0;
+		var initialY = 0;
+		var endX = 0;
+		var endY = 0;
+		
+		if(replaceBox.checked){
+			$("#screen").bind("mousedown",function(event){
+				if(event.which==1){
+					initialX = event.pageX;
+					initialY = event.pageY;
+					console.log(initialX + " " + initialY +" " + endX + " " + endY);
+				}
+			});
+			$("#screen").bind("mouseup",function(ev){
+				if(ev.which==1){
+					endX = ev.pageX;
+					endY = ev.pageY;
+					console.log(initialX + " " + initialY +" " + endX + " " + endY);
+					findSquare();
+				}
+			});
+			
+			function findSquare(){
+				loadScreen();
+				var offset = $("#screen").offset();
+				var screenCornerX = offset.left;
+				var screenCornerY = offset.top;
+				var currentFontWidth = $("#screen").css("font-size").substring(0,2);
+				//
+				// MESSING WITH FONT HEIGHT TO ACCOUNT FOR LINE SPACING
+				// 0.7 was preeetttyyy okay
+				//
+				var currentFontHeight = currentFontWidth/0.7;
+				
+				var locationOnScreenX = 0;
+				var locationOnScreenY = 0;
+				var squareW = 0;
+				var squareH = 0;
+				if(initialX < endX){
+					locationOnScreenX = initialX - screenCornerX;
+					squareW = endX - initialX;
+				} else {
+					locationOnScreenX = endX - screenCornerX;
+					squareW = initialX - endX;
+				}
+				if(initialY < endY){
+					locationOnScreenY = initialY - screenCornerY;
+					squareH = endY - initialY;
+				} else {
+					locationOnScreenY = endY - screenCornerY;
+					squareH = initialY - endY;
+				}
+				squareW = Math.ceil(squareW/currentFontWidth);
+				squareH = Math.ceil(squareH/currentFontHeight);
+				locationOnScreenX = Math.floor(locationOnScreenX/currentFontWidth);
+				locationOnScreenY = Math.floor(locationOnScreenY/currentFontHeight);
+				if(squareW < 0){
+					squareW = 0;
+				} else if(squareH < 0){
+					squareH = 0;
+				} else if(locationOnScreenX < 0){
+					locationOnScreenX = 0;
+				} else if(locationOnScreenY < 0){
+					locationOnScreenY = 0;
+				}
+				
+				var replaceChar = prompt("New character: ", ".");
+				if(replaceChar == "null"){
+					replaceChar = '.';
+				} else {
+					replaceChar = replaceChar.substring(0,1);
+				}
+				for( var i = locationOnScreenY + 1; i < squareH + locationOnScreenY; i++){
+					var addThis = "";
+					for(var v = locationOnScreenX; v < locationOnScreenX+squareW; v++){
+						addThis += replaceChar;
+					}
+					mapInMemory[i] = mapInMemory[i].substring(0,locationOnScreenX) + addThis + mapInMemory[i].substring(locationOnScreenX + squareW);
+				}
+				redrawScreen();
+			}
+		} else {
+			$("#screen").unbind();
+		}
+	}
+	
+	function exportToHTML(){
+		loadScreen();
+		var htmlOut = '"';
+		var biome = prompt("Enter the biome of the map\n1. Normal\n2. Snow\n3. Swamp\n4. Lava", "1");
+		if (biome != null) {
+			switch(biome){
+				case "1":
+					normal();
+					break;
+				case "2":
+					snow();
+					break;
+				case "3":
+					swamp();
+					break;
+				case "4":
+					lava();
+					break;
+				default:
+					normal();
+					break;
+			}
+		}
+		function normal(){
+			for(var a = 0; a < mapInMemory.length; a++){
+				var txt = mapInMemory[a];
+				for(var i = 0; i < txt.length; i++){
+					switch(txt.substring(i,i+1)){
+						case 'T':
+							htmlOut += "<span class='tree'>T</span>";
+							break;
+						case 'Y':
+							htmlOut += "<span class='tree'>Y</span>";
+							break;
+						case '.':
+							htmlOut += "<span class='bgdt'>.</span>";
+							break;
+						case '~':
+							htmlOut += "<span class='watr'>~</span>";
+							break;
+						case '#':
+							htmlOut += "<span class='wall'>#</span>";
+							break;
+						case '+':
+							htmlOut += "<span class='door'>+</span>";
+							break;
+						case '=':
+							htmlOut += "<span class='flor'>=</span>";
+							break;
+						case 'M':
+							htmlOut += "<span class='mntn'>M</span>";
+							break;
+						case '@':
+							htmlOut += '" , "';
+							break;
+						case '\n':
+							break;
+						default:
+							htmlOut += "<span class='bgdt'>.</span>";
+							break;
+					}
+				}
+			}
+		}
+		function snow(){
+			for(var a = 0; a < mapInMemory.length; a++){
+				var txt = mapInMemory[a];
+				for(var i = 0; i < txt.length; i++){
+					switch(txt.substring(i,i+1)){
+						case 'T':
+							htmlOut += "<span class='tree'>T</span>";
+							break;
+						case 'Y':
+							htmlOut += "<span class='tree'>Y</span>";
+							break;
+						case '.':
+							htmlOut += "<span class='bgdt'>.</span>";
+							break;
+						case '~':
+							htmlOut += "<span class='watr'>~</span>";
+							break;
+						case '#':
+							htmlOut += "<span class='wall'>#</span>";
+							break;
+						case '+':
+							htmlOut += "<span class='door'>+</span>";
+							break;
+						case '=':
+							htmlOut += "<span class='flor'>=</span>";
+							break;
+						case 'M':
+							htmlOut += "<span class='mntn'>M</span>";
+							break;
+						case ',':
+							htmlOut += "<span class='ice-'>,</span>";
+							break;
+						case '@':
+							htmlOut += '" , "';
+							break;
+						case '\n':
+							break;
+						default:
+							htmlOut += "<span class='ice-'>,</span>";
+							break;
+					}
+				}
+			}
+		}
+		function swamp(){
+			for(var a = 0; a < mapInMemory.length; a++){
+				var txt = mapInMemory[a];
+				for(var i = 0; i < txt.length; i++){
+					switch(txt.substring(i,i+1)){
+						case 'T':
+							htmlOut += "<span class='tree'>T</span>";
+							break;
+						case 'Y':
+							htmlOut += "<span class='tree'>Y</span>";
+							break;
+						case '.':
+							htmlOut += "<span class='bgdt'>.</span>";
+							break;
+						case '~':
+							htmlOut += "<span class='swmp'>~</span>";
+							break;
+						case '#':
+							htmlOut += "<span class='wall'>#</span>";
+							break;
+						case '+':
+							htmlOut += "<span class='door'>+</span>";
+							break;
+						case '=':
+							htmlOut += "<span class='flor'>=</span>";
+							break;
+						case 'M':
+							htmlOut += "<span class='mntn'>M</span>";
+							break;
+						case '@':
+							htmlOut += '" , "';
+							break;
+						case '\n':
+							break;
+						default:
+							break;
+					}
+				}
+			}
+		}
+		function lava(){
+			for(var a = 0; a < mapInMemory.length; a++){
+				var txt = mapInMemory[a];
+				for(var i = 0; i < txt.length; i++){
+					switch(txt.substring(i,i+1)){
+						case 'T':
+							htmlOut += "<span class='tree'>T</span>";
+							break;
+						case 'Y':
+							htmlOut += "<span class='tree'>Y</span>";
+							break;
+						case '.':
+							htmlOut += "<span class='bgdt'>.</span>";
+							break;
+						case '~':
+							htmlOut += "<span class='lava'>~</span>";
+							break;
+						case '#':
+							htmlOut += "<span class='wall'>#</span>";
+							break;
+						case '+':
+							htmlOut += "<span class='door'>+</span>";
+							break;
+						case '=':
+							htmlOut += "<span class='flor'>=</span>";
+							break;
+						case 'M':
+							htmlOut += "<span class='mntn'>M</span>";
+							break;
+						case '@':
+							htmlOut += '" , "';
+							break;
+						case '\n':
+							break;
+						default:
+							break;
+					}
+				}
+			}
+		}
+		
+		htmlOut = htmlOut.substring(0,htmlOut.length-3); //cuts off last (, ")
+		console.log(htmlOut);
+	}
+	
+	function insertMode(){
+		if(document.getElementById("insertModeButton").checked){
+			$("#screen").bind('keydown', function(event){
+				if(event.keyCode > 47 && event.keyCode <= 111){
+					event.preventDefault();
+				}
+				var s = this.selectionStart;
+				//$("#screen").val($("#screen").val().substring(0, s) + 'x' + $("#screen").val().substring(s + 1));
+				var whichLine = 0;
+				var howLong = mapInMemory[whichLine].length-2;
+				while(howLong < s){
+					howLong += mapInMemory[whichLine].length-2;
+					whichLine++;
+				}
+				
+				//mapInMemory[whichLine] = mapInMemory[whichLine].substring(0,(s%mapInMemory[whichLine].length)) + String.fromCharCode(event.keyCode) + mapInMemory[whichLine].substring((s%mapInMemory[whichLine].length)+ 1);
+				var output = "";
+				for(var i = 0; i < mapInMemory.length; i++){
+					output += mapInMemory[i]
+				}
+				//$("#screen").val(output);
+				alert("sorry it really doesn't work");
+				redrawScreen();
+			});
+		} else {
+			$("#screen").unbind();
+		}
+	}
+	
+	function exactReplaceTool(){
+		var input = prompt("Enter the corners of the square");
+	}
+	
+	
+  </script>
+  </head>
+  <body onload="checkFileAPI();">
+	<div class="header">
+		<h2>Creator Platform</h2>
+	</div>
+	<div class="mainTextArea">
+		<span id="insertMode">insert</span><input class="sideField" id="insertModeButton" onclick="insertMode()" type="checkbox">
+		<span id="replaceText">replace:</span><input class="topField" id="replaceButton" onclick="replaceTool()" type="checkbox">
+		<input class="topField" id="replaceButton" onclick="exactReplaceTool()" value="replace" type="button">
+		<input class="topField" id="fontMeasure" onblur="changeFontSize()" placeholder="px" type="number">
+		<input class="topField" id="clearButton" onclick="clearTool()" value="clear screen" type="button">
+		<input class="topField" id="clipButton" onclick="clipTool()" value="clip" type="button">
+		<input class="topField" id="@SignButton" onclick="addEndSign()" value="append @" type="button">
+		<input class="topField" id="redrawButton" onclick="redrawScreen()" value="refresh" type="button">
+		<input class="topField" id="refreshButton" onclick="loadScreen()" value="load current" type="button">
+
+		<input id="widthMeasure" placeholder="width" onblur="changeWidth()" type="number">
+		<textarea id="screen" wrap="off"></textarea>
+		<input id="heightMeasure" placeholder="height" onblur="changeHeight()" type="number">
+	</div>
+	<div class="sidebar">
+		<h3 id="sidebarTitle">Char list</h3>
+		<p id="sidebarText">
+			@<br>
+			.<br>
+			T<br>
+			Y<br>
+			~<br>
+			#<br>
+			+<br>
+			/<br>
+			M<br>
+			=<br>
+		</p>
+	</div>
+	
+	<div class = "footer" id="importFile">
+		<label>Import File: </label>
+		<input type="file" onchange='readText(this)'/>
+	</div>
+	<input id="exportButton" onclick="exportToHTML()" value="export" type="button">
+  </body>
+ </html>
