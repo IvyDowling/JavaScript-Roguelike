@@ -1,7 +1,7 @@
 JavaScript-Roguelike
 ====================
 
-Working on a roguelike written in Javascript, made pretty by CSS.
+A single screen roguelike written in Javascript, made pretty by CSS.
 
 I worked on this over the summer, and used this as a way to get some experience in JavaScript, CSS, and HTML.
 
